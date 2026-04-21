@@ -94,14 +94,22 @@ def search_combo(menu, prices):
                 easygui.msgbox("Combo updated!")
 
 def detect_auto_combo(selected_items, menu):
-    """Return combo name if selected items match a combo exactly."""
     for combo_name, combo_items in menu.items():
         if sorted(combo_items) == sorted(selected_items):
             return combo_name
     return None
 
+def find_best_combos(item_choices, menu):
+    items_remaining = item_choices.copy()
+    combos_found = []
+    for combo_name, combo_items in menu.items():
+        if all(item in items_remaining for item in combo_items):
+            combos_found.append(combo_name)
+            for item in combo_items:
+                items_remaining.remove(item)
+    return combos_found, items_remaining
+
 def order_food(menu, prices):
-    # Step 1: Choose combos
     combo_choices = easygui.multchoicebox(
         "Select combos to order:",
         choices=list(menu.keys())
@@ -114,16 +122,16 @@ def order_food(menu, prices):
     )
     if item_choices is None:
         return
-    auto_combo = detect_auto_combo(item_choices, menu)
-    if auto_combo:
-        convert = easygui.buttonbox(
-            f"You selected items that match the '{auto_combo}' combo.\n"
-            "Convert items into this combo?",
-            choices=["Yes", "No"]
-        )
+    auto_combos, leftover_items = find_best_combos(item_choices, menu)
+    if auto_combos:
+        msg = "We detected combos you can save money on:\n\n"
+        for c in auto_combos:
+            msg += f"- {c}\n"
+        msg += "\nConvert these items into combos?"
+        convert = easygui.buttonbox(msg, choices=["Yes", "No"])
         if convert == "Yes":
-            combo_choices.append(auto_combo)
-            item_choices = []
+            combo_choices.extend(auto_combos)
+            item_choices = leftover_items
 
     total = 0
     order_summary = "ORDER SUMMARY:\n\n"
